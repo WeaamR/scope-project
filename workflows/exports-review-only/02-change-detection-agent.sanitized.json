@@ -1,0 +1,325 @@
+{
+  "name": "SCOPE - Change Detection Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scope-change-detection",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        -16
+      ],
+      "id": "a10ec3bf-70dc-4965-948d-eb9b4cb90d1a",
+      "name": "Webhook",
+      "webhookId": "REDACTED_WEBHOOK_ID",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REDACTED_CREDENTIAL_ID",
+          "name": "REDACTED_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=\n{{ JSON.stringify({\n  systemInstruction: {\n    parts: [{\n      text: `أنت SCOPE، خبير متخصص في تحليل نطاق العمل للمستقلين واكتشاف التغييرات التي يطلبها العملاء بعد اعتماد الاتفاق.\n\nهدفك:\nمقارنة رسالة العميل الجديدة بآخر نسخة معتمدة من نطاق العمل، وتحديد ما إذا كانت الطلبات الجديدة مشمولة في الاتفاق أو تمثل عملاً إضافياً أو تحتاج إلى توضيح.\n\nأولاً: المرجع المعتمد\n\n1. المرجع الوحيد للمقارنة هو كائن approved_scope الذي يتم تمريره إليك.\n2. يجب أن تكون حالة الاتفاق approved.\n3. استخدم رقم النسخة version_number لتحديد الاتفاق محل المقارنة.\n4. لا تستخدم المسودات أو النسخ غير المعتمدة.\n5. لا تخترع أي بند أو شرط أو التزام غير موجود في الاتفاق.\n6. طلب العميل لا يعني موافقة المستقل عليه.\n7. لا تخترع أسعاراً أو مواعيد أو تكاليف إضافية.\n\nثانياً: فهم بيانات الاتفاق\n\nقد يحتوي approved_scope على:\n\n- deliverables: المخرجات المعتمدة.\n- included_services: الخدمات المشمولة.\n- excluded_services: الخدمات المستثناة.\n- client_responsibilities: مسؤوليات العميل.\n- unresolved_items: البنود غير المحسومة.\n- revision_rounds: عدد جولات التعديل.\n- delivery_deadline: موعد التسليم المعتمد.\n- delivery_condition: شروط التسليم.\n- terms: الشروط والأحكام.\n- version_number: رقم نسخة الاتفاق.\n- status: حالة الاتفاق.\n\nقواعد التعامل مع هذه البيانات:\n\n1. استخدم deliverables وincluded_services وexcluded_services والشروط المعتمدة كمرجع للأدلة التعاقدية.\n2. البنود الموجودة في unresolved_items غير محسومة، ولا تمثل شروطاً تعاقدية معتمدة.\n3. لا تستخدم unresolved_items لإثبات أن طلباً ما داخل النطاق أو خارجه.\n4. إذا ارتبط طلب جديد ببند غير محسوم، صنفه needs_clarification.\n5. غياب بند من الاتفاق لا يعني تلقائياً أنه مستثنى.\n6. لا تعتبر أي خدمة مشمولة أو مستثناة دون وجود دليل واضح في الاتفاق.\n\nثالثاً: تصنيف التغييرات\n\nاستخدم التصنيفات الثلاثة التالية فقط:\n\nwithin_scope:\nيستخدم عندما يكون الطلب الجديد مشمولاً بوضوح في الاتفاق المعتمد ولا يضيف مخرجاً أو التزاماً جديداً.\n\nadditional_work:\nيستخدم عندما يثبت الاتفاق المعتمد بوضوح أن الطلب الجديد يتجاوز المخرجات أو الخدمات أو الشروط المتفق عليها.\n\nneeds_clarification:\nيستخدم عندما لا توجد معلومات تعاقدية كافية للحكم، أو عندما يكون الطلب مرتبطاً ببند غير محسوم أو غامض.\n\nرابعاً: قواعد المقارنة\n\nافحص طلبات العميل الجديدة من حيث:\n\n- المخرجات المطلوبة.\n- مدة الفيديو أو المحتوى.\n- المقاسات والأبعاد.\n- عدد النسخ.\n- عدد جولات التعديل.\n- تغيير الفكرة أو السكربت.\n- الخدمات المشمولة والمستثناة.\n- مسؤوليات العميل.\n- موعد التسليم.\n- الشروط والأحكام المعتمدة.\n\nأمثلة تطبيقية:\n\n1. الاتفاق يشمل نسخة عمودية واحدة، والعميل يطلب نسخة أفقية إضافية:\nadditional_work.\n\n2. الاتفاق يحدد مدة الفيديو بـ30 ثانية، والعميل يطلب 60 ثانية:\nadditional_work.\n\n3. مدة 30 ثانية موجودة فقط ضمن unresolved_items، والعميل يطلب 60 ثانية:\nneeds_clarification.\n\n4. العميل يطلب تغيير الفكرة بالكامل، ولا يوجد بند معتمد يحدد سياسة تغيير الفكرة:\nneeds_clarification.\n\n5. الاتفاق ينص صراحة على أن تغيير الفكرة بعد اعتمادها عمل إضافي:\nadditional_work.\n\n6. العميل يطلب تعديلاً ضمن جولات التعديل المتفق عليها:\nwithin_scope، بشرط ألا يتجاوز المخرجات والشروط المعتمدة.\n\n7. العميل يطلب خدمة غير مذكورة في الاتفاق ولا يوجد نص يستثنيها:\nneeds_clarification، وليس additional_work تلقائياً.\n\n8. العميل يطلب خدمة مستثناة صراحة في الاتفاق:\nadditional_work.\n\n9. العميل يطلب تغيير موعد التسليم دون وجود شروط واضحة تحكم هذا التغيير:\nneeds_clarification.\n\nخامساً: التحقق من الأدلة\n\nلكل تغيير، يجب:\n\n- تحديد الطلب الجديد بدقة.\n- استخراج البند المرتبط به من الاتفاق المعتمد.\n- ذكر الدليل الفعلي.\n- توضيح سبب التصنيف.\n- شرح التأثير المحتمل على الوقت أو المخرجات أو الجهد.\n- اقتراح الإجراء المناسب.\n\nقواعد إلزامية:\n\n1. لا تستخدم unresolved_items كدليل تعاقدي.\n2. لا تقتبس بنداً غير موجود في الاتفاق.\n3. لا تنسب شروطاً غير معتمدة إلى المستقل.\n4. لا تعتبر غياب المعلومة دليلاً على الاستثناء.\n5. إذا لم تجد دليلاً تعاقدياً، استخدم العبارة:\n\"لا يوجد بند معتمد وصريح يحسم هذا الطلب.\"\n6. لا تضف حقلاً باسم agreement_evidence_type أو أي حقل غير موجود في هيكل المخرجات المطلوب.\n\nسادساً: العناصر التي لم تتغير\n\nفي unchanged_items:\n\n- اذكر البنود المرتبطة بالمقارنة والتي لم يطلب العميل تغييرها.\n- لا تضف جميع خدمات المستقل تلقائياً.\n- لا تضع البنود غير المحسومة ضمن العناصر المعتمدة.\n- لا تكرر العناصر الموجودة في change_assessment.\n\nسابعاً: المخاطر والمعلومات الناقصة\n\nmissing_information:\n- اذكر المعلومات الضرورية التي لم تتوفر للحكم على الطلب.\n- لا تسأل العميل عن معلومات موجودة بالفعل في الاتفاق.\n\nrisks:\n- فرّق بين المخاطر المؤكدة والاحتمالات.\n- وضح مخاطر تنفيذ عمل إضافي دون تحديث الاتفاق.\n- وضح أثر التغييرات على الوقت والمخرجات.\n- لا تفترض تكلفة أو تأخيراً مؤكداً دون دليل.\n\nثامناً: أسئلة المتابعة والرد على العميل\n\nsuggested_questions:\n- أنشئ أسئلة مرتبطة مباشرة بالنقاط غير المحسومة.\n- لا تسأل العميل عن شروط موجودة بالفعل في الاتفاق.\n- لا تطلب منه تأكيد معلومات يستطيع النظام استخراجها من الاتفاق.\n\nsuggested_response:\n- اكتب رسالة مهنية وطبيعية باللغة العربية.\n- وضح التغييرات المؤكدة خارج النطاق.\n- وضح الطلبات التي تحتاج إلى توضيح بشكل منفصل.\n- لا توحِ بأن العمل الإضافي أصبح معتمداً.\n- لا تخترع أسعاراً أو مواعيد.\n- لا توحي بأن كل طلب غير محسوم يتطلب تكلفة إضافية.\n- لا تقترح بدء تنفيذ التغييرات قبل موافقة المستقل وتحديث الاتفاق عند الحاجة.\n\nتاسعاً: التصنيف العام وتحديث الاتفاق\n\noverall_classification:\n\n- additional_work إذا وُجد تغيير واحد مؤكد خارج النطاق.\n- needs_clarification إذا لم يوجد عمل إضافي مؤكد، وكانت هناك طلبات غير محسومة.\n- within_scope إذا كانت جميع الطلبات مشمولة بوضوح.\n\nعند وجود عمل إضافي مؤكد مع طلبات أخرى غير محسومة، يكون التصنيف العام additional_work، مع الاحتفاظ بالتصنيف المستقل لكل طلب داخل change_assessment.\n\nrequires_scope_update:\n\n- true إذا وُجد عمل إضافي مؤكد يستلزم تحديث الاتفاق بعد موافقة المستقل.\n- false إذا لم يوجد عمل إضافي مؤكد.\n\nscope_update_reason:\nوضح سبب الحاجة إلى تحديث الاتفاق، أو اتركه فارغاً إذا لم تكن هناك حاجة.\n\nلا تنشئ نسخة اتفاق جديدة تلقائياً، ولا تعتمد أي تغيير نيابة عن المستقل.\n\nعاشراً: بنية JSON الإلزامية\n\nأعد JSON صالحاً فقط، دون Markdown أو نص إضافي.\n\nاستخدم البنية التالية حصراً:\n\n{\n  \"overall_classification\": \"needs_clarification\",\n  \"change_summary\": \"\",\n  \"change_assessment\": [\n    {\n      \"requested_change\": \"\",\n      \"classification\": \"needs_clarification\",\n      \"agreement_evidence\": \"\",\n      \"reason\": \"\",\n      \"potential_impact\": \"\",\n      \"recommended_action\": \"\"\n    }\n  ],\n  \"unchanged_items\": [],\n  \"missing_information\": [],\n  \"risks\": [],\n  \"suggested_questions\": [],\n  \"suggested_response\": \"\",\n  \"requires_scope_update\": false,\n  \"scope_update_reason\": \"\"\n}\n\nالتزم بجميع القواعد التالية عند إخراج النتيجة:\n\n- لا تضف مفاتيح جديدة.\n- لا تحذف مفاتيح من البنية.\n- لا تغير أسماء الحقول.\n- لا تستخدم تصنيفات غير التصنيفات الثلاثة المحددة.\n- لا تضع نصاً خارج JSON.\n- اجعل جميع النصوص واضحة ومختصرة ومهنية.\n\nالقاعدة النهائية:\nالاتفاق المعتمد هو المرجع، والبنود غير المحسومة ليست أدلة تعاقدية، وطلب العميل ليس موافقة المستقل.\n\nمهمتك حماية نطاق العمل من التوسع غير المتفق عليه، دون إصدار أحكام غير مدعومة بالأدلة.`\n    }]\n  },\n  contents: [{\n    role: \"user\",\n    parts: [{\n      text:\n        \"رسالة العميل الجديدة:\\n\" +\n        ($json.body?.new_client_message ??\n         $json.body?.client_message ?? \"\") +\n        \"\\n\\nآخر نسخة معتمدة من الاتفاق:\\n\" +\n        JSON.stringify(\n          $json.body?.approved_scope ??\n          $json.body?.scope ?? {}\n        )\n    }]\n  }],\n  generationConfig: {\n    temperature: 0.1,\n    maxOutputTokens: 2600,\n    responseMimeType: \"application/json\"\n  }\n}) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        736,
+        -16
+      ],
+      "id": "8307e940-21b9-48c3-a8fa-c3411bb94323",
+      "name": "HTTP Request",
+      "retryOnFail": false,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REDACTED_CREDENTIAL_ID",
+          "name": "REDACTED_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1184,
+        -16
+      ],
+      "id": "b74651d5-c9b5-4c13-920d-a1189a069664",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "getAll",
+        "projectRef": "yiutescoquvzhmoqopfl",
+        "tableId": "scope_versions",
+        "limit": 1,
+        "orderBy": "created_at.desc",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "=project_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').first().json.body.project_id }}"
+            },
+            {
+              "keyName": "user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').first().json.body.user_id }}"
+            },
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "approved"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        224,
+        272
+      ],
+      "id": "5cac9268-0c05-4173-b535-bed60fb262cd",
+      "name": "Get Approved Scope Version",
+      "credentials": {
+        "supabaseOAuth2Api": {
+          "id": "REDACTED_CREDENTIAL_ID",
+          "name": "REDACTED_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "getAll",
+        "projectRef": "yiutescoquvzhmoqopfl",
+        "tableId": "scope_items",
+        "limit": 100,
+        "orderBy": "sort_order.asc",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "scope_version_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get Approved Scope Version').first().json.id }}"
+            },
+            {
+              "keyName": "user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').first().json.body.user_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        448,
+        272
+      ],
+      "id": "9835cb86-b917-4ba7-b9d3-c22d169ec3ec",
+      "name": "Get Approved Scope Items",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseOAuth2Api": {
+          "id": "REDACTED_CREDENTIAL_ID",
+          "name": "REDACTED_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst request = $('Webhook').first().json.body || {};\n\nconst version = $('Get Approved Scope Version').first().json;\n\nconst rows = $input.all()\n  .map(item => item.json)\n  .filter(item => item.id && item.category);\n\nif (!version?.id || version.status !== 'approved') {\n  throw new Error('No approved scope version found.');\n}\n\nconst grouped = {\n  deliverables: [],\n  included_services: [],\n  excluded_services: [],\n  client_responsibilities: [],\n  unresolved_items: []\n};\n\nfor (const item of rows) {\n  const entry = {\n    title: item.title || '',\n    description: item.description || null\n  };\n\n  switch (item.category) {\n    case 'deliverable':\n      grouped.deliverables.push(entry);\n      break;\n    case 'included':\n      grouped.included_services.push(entry);\n      break;\n    case 'excluded':\n      grouped.excluded_services.push(entry);\n      break;\n    case 'client_responsibility':\n      grouped.client_responsibilities.push(entry);\n      break;\n    case 'unresolved':\n      grouped.unresolved_items.push(entry);\n      break;\n  }\n}\n\n// Prefer scope_items when populated.\n// Otherwise, use the structured JSONB fields.\nconst approvedScope = {\n  id: version.id,\n  project_id: version.project_id,\n  user_id: version.user_id,\n  version_number: version.version_number,\n  status: version.status,\n\n  scope_title: version.scope_title,\n  summary: version.summary,\n\n  deliverables:\n    grouped.deliverables.length\n      ? grouped.deliverables\n      : (version.deliverables || []),\n\n  included_services:\n    grouped.included_services.length\n      ? grouped.included_services\n      : (version.included_services || []),\n\n  excluded_services:\n    grouped.excluded_services.length\n      ? grouped.excluded_services\n      : (version.excluded_services || []),\n\n  client_responsibilities:\n    grouped.client_responsibilities.length\n      ? grouped.client_responsibilities\n      : (version.client_responsibilities || []),\n\n  unresolved_items: grouped.unresolved_items,\n\n  revision_rounds: version.revision_rounds,\n  delivery_deadline: version.delivery_deadline,\n  delivery_condition: version.delivery_condition,\n  terms: version.terms\n};\n\nreturn [{\n  json: {\n    body: {\n      ...request,\n      approved_scope: approvedScope\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        288
+      ],
+      "id": "7b7ededb-3726-4efe-b315-3906335b60e0",
+      "name": "Prepare Change Analysis Input"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst response = $input.first().json;\n\nconst content = response?.candidates?.[0]\n  ?.content?.parts\n  ?.map(part => part.text || \"\")\n  .join(\"\")\n  .trim();\n\nif (!content) {\n  return [{\n    json: {\n      success: false,\n      error: \"Gemini لم يرجع نتيجة نصية\"\n    }\n  }];\n}\n\nlet analysis;\n\ntry {\n  const cleaned = content\n    .replace(/^```json\\s*/i, \"\")\n    .replace(/^```\\s*/i, \"\")\n    .replace(/\\s*```$/, \"\")\n    .replace(/,\\s*([}\\]])/g, \"$1\");\n\n  analysis = JSON.parse(cleaned);\n} catch (error) {\n  return [{\n    json: {\n      success: false,\n      error: \"تعذر قراءة JSON من Gemini\",\n      details: error.message\n    }\n  }];\n}\n\n// Retrieve the actual approved agreement\nconst webhookBody = $('Webhook').first().json.body || {};\n\nconst scope = webhookBody.approved_scope;\n\nif (!scope || scope.status !== \"approved\") {\n  throw new Error(\"No valid approved scope found.\");\n}\n\nconst allowed = [\n  \"within_scope\",\n  \"additional_work\",\n  \"needs_clarification\"\n];\n\n// Only approved contractual fields count as evidence\nconst approvedText = JSON.stringify({\n  deliverables: scope.deliverables || [],\n  included_services: scope.included_services || [],\n  excluded_services: scope.excluded_services || [],\n  client_responsibilities: scope.client_responsibilities || [],\n  terms: scope.terms || \"\",\n  summary: scope.summary || \"\"\n});\n\n// Never use unresolved items as evidence\nconst hasApprovedDuration =\n  /(?:\\d+)\\s*(?:ثانية|ثوانٍ|ثواني|دقيقة|دقائق|ساعة|ساعات|seconds?|secs?|minutes?|mins?|hours?)/i\n  .test(approvedText);\n\nconst hasApprovedConceptChangeRule =\n  /(?:تغيير|تعديل).{0,30}(?:الفكرة|المفهوم)|(?:الفكرة|المفهوم).{0,30}(?:إضافي|مستثنى|خارج النطاق)/i\n  .test(approvedText);\n\nconst assessment = Array.isArray(analysis.change_assessment)\n  ? analysis.change_assessment.map(item => {\n\n      let classification = allowed.includes(item.classification)\n        ? item.classification\n        : \"needs_clarification\";\n\n      let evidence = item.agreement_evidence || \"\";\n      let reason = item.reason || \"\";\n      let action = item.recommended_action || \"\";\n\n      const requested = item.requested_change || \"\";\n\n      // Duration must have an explicit approved baseline\n      if (\n        /مدة|ثانية|دقيقة/.test(requested) &&\n        !hasApprovedDuration\n      ) {\n        classification = \"needs_clarification\";\n        evidence = \"لا يوجد بند معتمد وصريح يحسم مدة الفيديو.\";\n        reason = \"المدة الأصلية وردت ضمن البنود غير المحسومة، ولا يجوز اعتبارها مدة تعاقدية معتمدة.\";\n        action = \"مراجعة وتأكيد المدة الأصلية مع المستقل قبل تحديد أثر الزيادة.\";\n      }\n\n      // Conceptual change requires an explicit approved clause\n      if (\n        /تغيير.*(?:الفكرة|المفهوم)|(?:الفكرة|المفهوم).*بالكامل/.test(requested) &&\n        !hasApprovedConceptChangeRule\n      ) {\n        classification = \"needs_clarification\";\n        evidence = \"لا يوجد بند معتمد وصريح يحسم تغيير الفكرة.\";\n        reason = \"الاتفاق لا يتضمن شرطاً واضحاً يحدد سياسة تغيير الفكرة بعد اعتمادها.\";\n        action = \"توضيح حجم التغيير المطلوب ومراجعته مع المستقل.\";\n      }\n\n      return {\n        requested_change: requested,\n        classification,\n        agreement_evidence: evidence,\n        reason,\n        potential_impact: item.potential_impact || \"\",\n        recommended_action: action\n      };\n    })\n  : [];\n\n// Determine overall classification from validated items\nconst hasAdditional = assessment.some(\n  item => item.classification === \"additional_work\"\n);\n\nconst hasClarification = assessment.some(\n  item => item.classification === \"needs_clarification\"\n);\n\nconst overall = hasAdditional\n  ? \"additional_work\"\n  : hasClarification\n    ? \"needs_clarification\"\n    : \"within_scope\";\n\nconst additionalItems = assessment\n  .filter(item => item.classification === \"additional_work\");\n\nconst clarificationItems = assessment\n  .filter(item => item.classification === \"needs_clarification\");\n\n// Generate a response consistent with validated findings\nlet suggestedResponse = \"مرحباً، شكراً لتوضيح طلباتك. \";\n\nif (additionalItems.length) {\n  suggestedResponse +=\n    \"بعد مراجعة الاتفاق المعتمد، تبيّن أن الطلبات التالية تمثل أعمالاً إضافية: \" +\n    additionalItems.map(item => item.requested_change).join(\"، \") +\n    \". يمكننا مناقشة تفاصيلها وتحديث الاتفاق بعد موافقتك. \";\n}\n\nif (clarificationItems.length) {\n  suggestedResponse +=\n    \"كما توجد نقاط تحتاج إلى توضيح قبل تحديد نطاقها النهائي: \" +\n    clarificationItems.map(item => item.requested_change).join(\"، \") +\n    \". نرجو توضيحها حتى نتمكن من تحديد المتطلبات بدقة.\";\n}\n\nif (!additionalItems.length && !clarificationItems.length) {\n  suggestedResponse +=\n    \"الطلبات الجديدة تقع ضمن نطاق الاتفاق المعتمد.\";\n}\n\nreturn [{\n  json: {\n    success: true,\n    model: response.modelVersion || \"Gemini Flash\",\n    analysis: {\n      overall_classification: overall,\n      change_summary: analysis.change_summary || \"\",\n      change_assessment: assessment,\n      unchanged_items: analysis.unchanged_items || [],\n      missing_information: analysis.missing_information || [],\n      risks: analysis.risks || [],\n      suggested_questions: analysis.suggested_questions || [],\n      suggested_response: suggestedResponse,\n      requires_scope_update: hasAdditional,\n      scope_update_reason: hasAdditional\n        ? \"توجد أعمال إضافية مؤكدة: \" +\n          additionalItems.map(item => item.requested_change).join(\"، \")\n        : \"\"\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -16
+      ],
+      "id": "38de2cdc-9a89-447e-8d68-40bb7a207e80",
+      "name": "Code – Parse Result"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "projectRef": "yiutescoquvzhmoqopfl",
+        "tableId": "change_reviews",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "project_id",
+              "fieldValue": "={{ $('Webhook').first().json.body.project_id }}"
+            },
+            {
+              "fieldId": "scope_version_id",
+              "fieldValue": "={{ $('Get Approved Scope Version').first().json.id }}"
+            },
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('Webhook').first().json.body.user_id }}"
+            },
+            {
+              "fieldId": "client_message",
+              "fieldValue": "={{ $('Webhook').first().json.body.new_client_message }}"
+            },
+            {
+              "fieldId": "classification",
+              "fieldValue": "={{ $json.analysis.overall_classification }}"
+            },
+            {
+              "fieldId": "findings",
+              "fieldValue": "={{ $json.analysis }}"
+            },
+            {
+              "fieldId": "suggested_response",
+              "fieldValue": "={{ $json.analysis.suggested_response }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        320
+      ],
+      "id": "694fb4f4-87bc-4ddc-98da-f63d9ca11968",
+      "name": "Save Change Review",
+      "credentials": {
+        "supabaseOAuth2Api": {
+          "id": "REDACTED_CREDENTIAL_ID",
+          "name": "REDACTED_CREDENTIAL_NAME"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code – Parse Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Approved Scope Version": {
+      "main": [
+        [
+          {
+            "node": "Get Approved Scope Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Approved Scope Items": {
+      "main": [
+        [
+          {
+            "node": "Prepare Change Analysis Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Change Analysis Input": {
+      "main": [
+        []
+      ]
+    },
+    "Code – Parse Result": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Change Review": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "41249016-9630-49c2-8e43-68c86ec821d7",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "I8eN4PeQvJpz96GD",
+  "tags": []
+}

@@ -1,0 +1,25 @@
+digraph SCOPE {
+  graph [rankdir=TB, bgcolor="white", pad="0.25", nodesep="0.38", ranksep="0.55", fontname="Arial", labelloc="t", label="SCOPE — High-Level System Architecture", fontsize=20];
+  node [shape=box, style="rounded,filled", color="#D8DCE6", fillcolor="#F7F8FC", fontname="Arial", fontsize=11, margin="0.18,0.12"];
+  edge [color="#64748B", penwidth=1.4, arrowsize=0.8, fontname="Arial", fontsize=9];
+  freelancer [label="Freelancer / User", fillcolor="#FFF7DB", color="#E7C34A"];
+  frontend [label="Frontend\nLovable · React · TypeScript\nArabic RTL UI", fillcolor="#EAF0FF", color="#647DB8"];
+  auth [label="Supabase Auth\nJWT", fillcolor="#F1ECFF", color="#8A6CC4"];
+  db [label="Supabase PostgreSQL\nRLS-protected tables\nprojects · services · analyses\nscope_versions · scope_items\nchange_reviews · project_messages", fillcolor="#E8F7EF", color="#55A477"];
+  edgefn [label="Supabase Edge Functions\nAuthenticated orchestration", fillcolor="#F1ECFF", color="#8A6CC4"];
+  n8n [label="n8n Cloud Workflows\nRequest Analysis · Change Detection\nScope Resolution", fillcolor="#FFF0E8", color="#D78B54"];
+  gemini [label="Gemini 3.5 Flash Lite\nNatural-language analysis\nStructured JSON response", fillcolor="#EAF7FF", color="#5B9FC6"];
+  rpc [label="Supabase RPC\nresolve_scope_item\nFreelancer-confirmed resolution", fillcolor="#E8F7EF", color="#55A477"];
+  freelancer -> frontend;
+  frontend -> auth [label="sign up / sign in"];
+  frontend -> db [label="read / write via app services"];
+  frontend -> edgefn [label="request / change analysis"];
+  edgefn -> n8n [label="secured webhook"];
+  n8n -> gemini [label="HTTP API"];
+  gemini -> n8n [label="JSON output"];
+  n8n -> edgefn [label="validated response"];
+  edgefn -> frontend [label="results for review"];
+  n8n -> rpc [label="scope resolution path"];
+  rpc -> db [label="controlled update"];
+  db -> frontend [label="saved project records"];
+}

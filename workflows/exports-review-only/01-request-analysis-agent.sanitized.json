@@ -1,0 +1,219 @@
+{
+  "name": "SCOPE - Request Analysis Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scope-request-analysis",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "307af2b5-b170-467e-aca0-c12919bb2f07",
+      "name": "Webhook",
+      "webhookId": "REDACTED_WEBHOOK_ID",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REDACTED_CREDENTIAL_ID",
+          "name": "REDACTED_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst response = $input.first().json;\n\nconst content = response?.candidates?.[0]\n  ?.content?.parts\n  ?.map(part => part.text || \"\")\n  .join(\"\")\n  .trim();\n\nif (!content) {\n  return [{\n    json: {\n      success: false,\n      error: \"Gemini لم يرجع نتيجة نصية\",\n      finish_reason:\n        response?.candidates?.[0]?.finishReason || null\n    }\n  }];\n}\n\nlet analysis;\n\ntry {\n  // تنظيف تنسيق Markdown إن ظهر\n  let cleaned = content\n    .replace(/^```json\\s*/i, \"\")\n    .replace(/^```\\s*/i, \"\")\n    .replace(/\\s*```$/, \"\")\n    .trim();\n\n  // حذف المفتاح العربي غير الصحيح الذي ظهر في استجابة Gemini\n  cleaned = cleaned.replace(\n    /^\\s*عبارات_غير_واضحة\\s*:\\s*\\[\\s*\\]\\s*,?\\s*$/gm,\n    \"\"\n  );\n\n  // إزالة الفواصل الزائدة قبل إغلاق JSON\n  cleaned = cleaned.replace(/,\\s*([}\\]])/g, \"$1\");\n\n  analysis = JSON.parse(cleaned);\n\n} catch (error) {\n  return [{\n    json: {\n      success: false,\n      error: \"تعذر قراءة JSON من Gemini\",\n      details: error.message,\n      raw_result: content\n    }\n  }];\n}\n\n// التحقق من التصنيفات\nconst allowedClassifications = [\n  \"within_scope\",\n  \"additional_work\",\n  \"needs_clarification\"\n];\n\nconst scopeAssessment = Array.isArray(analysis.scope_assessment)\n  ? analysis.scope_assessment.map(item => ({\n      item: item.item || \"\",\n      classification: allowedClassifications.includes(item.classification)\n        ? item.classification\n        : \"needs_clarification\",\n      evidence: item.evidence || \"\",\n      reason: item.reason || \"\"\n    }))\n  : [];\n\nreturn [{\n  json: {\n    success: true,\n    model: response.modelVersion || \"Gemini Flash\",\n    analysis: {\n      confirmed_facts: analysis.confirmed_facts || [],\n      missing_information: analysis.missing_information || [],\n      ambiguities: analysis.ambiguities || [],\n      risks: analysis.risks || [],\n      scope_assessment: scopeAssessment,\n      suggested_questions: analysis.suggested_questions || [],\n      suggested_client_message:\n        analysis.suggested_client_message || \"\"\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "20589073-f79c-46e6-9818-9519da36afcb",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        0
+      ],
+      "id": "094404e0-dd86-4029-8922-3f6311ce316f",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "projectRef": "yiutescoquvzhmoqopfl",
+        "tableId": "request_analyses",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "project_id",
+              "fieldValue": "={{ $('Webhook').item.json.body.project_id }}"
+            },
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('Webhook').item.json.body.user_id }}"
+            },
+            {
+              "fieldId": "analysis_status",
+              "fieldValue": "completed"
+            },
+            {
+              "fieldId": "model_name",
+              "fieldValue": "gemini-3.5-flash-lite"
+            },
+            {
+              "fieldId": "confirmed_facts",
+              "fieldValue": "={{ $json.analysis.confirmed_facts }}"
+            },
+            {
+              "fieldId": "missing_information",
+              "fieldValue": "={{ $json.analysis.missing_information }}"
+            },
+            {
+              "fieldId": "ambiguities",
+              "fieldValue": "={{ $json.analysis.ambiguities }}"
+            },
+            {
+              "fieldId": "risks",
+              "fieldValue": "={{ $json.analysis.risks }}"
+            },
+            {
+              "fieldId": "suggested_questions",
+              "fieldValue": "={{ $json.analysis.suggested_questions }}"
+            },
+            {
+              "fieldId": "suggested_client_message",
+              "fieldValue": "={{ $json.analysis.suggested_client_message }}"
+            },
+            {
+              "fieldId": "raw_result",
+              "fieldValue": "={{ $json.analysis }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        80,
+        368
+      ],
+      "id": "43073f9e-a353-4ec6-8e38-da4f661ebd56",
+      "name": "Save Request Analysis1",
+      "credentials": {
+        "supabaseOAuth2Api": {
+          "id": "REDACTED_CREDENTIAL_ID",
+          "name": "REDACTED_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=\n{{ JSON.stringify({\n  systemInstruction: {\n    parts: [{\n      text: `أنت SCOPE، خبير متخصص في تحليل طلبات العملاء وتحديد نطاق العمل للمستقلين.\n\nمهمتك تحليل رسالة العميل ومقارنتها بشروط الخدمة التي يقدمها المستقل، بهدف تحديد ما هو مشمول وما يمثل عملاً إضافياً وما يحتاج إلى توضيح قبل الموافقة على المشروع.\n\nأولاً: قواعد التحليل الأساسية\n\n1. لا تخترع أي معلومة أو متطلب أو اتفاق.\n2. افصل بين المعلومات التي ذكرها العميل وشروط الخدمة التي حددها المستقل.\n3. لا تعتبر أي معلومة مستنتجة حقيقة مؤكدة.\n4. لا تعتبر طلب العميل موافقة من المستقل.\n5. لا تعتبر الموعد الذي اقترحه العميل موعد تسليم معتمداً.\n6. لا تخترع أسعاراً أو مواعيد أو التزامات.\n7. يجب أن يكون لكل نتيجة دليل واضح من رسالة العميل أو بيانات الخدمة.\n8. إذا لم تكن المعلومات كافية لاتخاذ قرار، استخدم needs_clarification.\n9. أجب باللغة العربية المهنية والواضحة.\n\nثانياً: استخراج المعلومات\n\nconfirmed_facts:\n- استخرج الحقائق المذكورة صراحة في رسالة العميل فقط.\n- لا تضع شروط المستقل أو الخدمات المشمولة ضمن حقائق العميل.\n- لا تصف أي طلب بأنه معتمد أو متفق عليه.\n\nmissing_information:\n- حدد المعلومات الضرورية التي لم يقدمها العميل.\n- لا تضف أسئلة عامة لا تؤثر على تحديد نطاق العمل.\n\nambiguities:\n- اكتشف العبارات غير الواضحة أو التي تحتمل أكثر من تفسير.\n- وضح سبب الغموض وتأثيره على المشروع.\n\nrisks:\n- اكتشف مخاطر توسع نطاق العمل.\n- اكتشف مخاطر المواعيد والتكاليف والتوقعات غير المحددة.\n- لا تصنف احتمالاً على أنه حقيقة مؤكدة.\n\nثالثاً: قواعد تقييم نطاق العمل scope_assessment\n\nهذه أهم قاعدة في النظام:\n\nقيّم فقط المتطلبات التي طلبها العميل صراحة في رسالته.\n\nممنوع إدراج خدمة ضمن scope_assessment لمجرد أنها موجودة في قائمة الخدمات المشمولة لدى المستقل.\n\nمثال:\nإذا كانت الخدمة تشمل كتابة السكربت والتحريك والموسيقى، والعميل طلب الموسيقى فقط، فلا تدرج كتابة السكربت والتحريك ضمن متطلبات العميل.\n\nلكل متطلب طلبه العميل، استخدم أحد التصنيفات التالية:\n\nwithin_scope:\nيستخدم فقط عندما يكون المتطلب مشمولاً بوضوح وصراحة في بيانات الخدمة.\n\nadditional_work:\nيستخدم عندما يكون المتطلب مستثنى بوضوح من الخدمة أو يتطلب مخرجاً إضافياً غير مشمول.\n\nneeds_clarification:\nيستخدم عندما تكون بيانات الخدمة غير كافية للحكم على المتطلب، أو عندما يحتاج إلى تفاصيل أو موافقة إضافية.\n\nقواعد خاصة:\n\n- لا تفترض أن مدة الفيديو مشمولة إذا لم تحدد الخدمة حدود المدة.\n- لا تفترض أن نوع الفيديو المطلوب مشمول لمجرد أن اسم الخدمة يحتوي على كلمة فيديو.\n- إذا طلب العميل موعد تسليم، فهذا طلب وليس التزاماً من المستقل.\n- إذا لم يكن تاريخ التسليم محدداً، صنف الموعد needs_clarification.\n- لا تعتبر الموعد قابلاً للتنفيذ قبل التأكد من مدة الخدمة والوقت المتاح.\n- لا تعتبر أي تعديل أو إضافة معتمدة دون موافقة المستقل.\n- يجب أن يحتوي كل عنصر في scope_assessment على دليل حقيقي يوضح سبب تصنيفه.\n- لا تكرر المتطلبات ولا تضف عناصر لم يطلبها العميل.\n\nرابعاً: أسئلة المتابعة\n\nsuggested_questions:\n- أنشئ أسئلة مرتبطة مباشرة بالمعلومات الناقصة والغموض.\n- اجعل الأسئلة محددة ومختصرة.\n- أعط الأولوية للأسئلة التي تمنع بدء العمل بشكل صحيح.\n- لا تسأل العميل عن معلومات قدمها بالفعل.\n\nخامساً: رسالة العميل\n\nsuggested_client_message:\n- اكتب رسالة احترافية وطبيعية باللغة العربية.\n- اشكر العميل على طلبه.\n- وضح النقاط التي تحتاج إلى تأكيد.\n- وضح الخدمات الإضافية بطريقة مهنية دون افتراض أسعارها.\n- لا تؤكد موعد التسليم قبل موافقة المستقل.\n- لا تدّعِ أن الاتفاق أصبح معتمداً.\n- اجعل الرسالة جاهزة للمراجعة والإرسال.\n\nسادساً: شكل المخرجات\n\nأعد JSON صالحاً فقط دون Markdown أو أي نص إضافي.\n\nالتزم بالبنية التالية:\n\n{\n  \"confirmed_facts\": [],\n  \"missing_information\": [],\n  \"ambiguities\": [],\n  \"risks\": [],\n  \"scope_assessment\": [\n    {\n      \"item\": \"\",\n      \"classification\": \"within_scope\",\n      \"evidence\": \"\",\n      \"reason\": \"\"\n    }\n  ],\n  \"suggested_questions\": [],\n  \"suggested_client_message\": \"\"\n}\n\nاستخدم فقط التصنيفات التالية:\nwithin_scope\nadditional_work\nneeds_clarification\n\nلا تضف خدمات غير مطلوبة إلى scope_assessment.\nلا تخترع أدلة.\nلا تخلط بين طلب العميل وموافقة المستقل.\n\n\nSERVICE DATA INTERPRETATION:\n\n- description defines the general service description and limitations.\n- deliverables defines the outputs explicitly included in the service.\n- exclusions defines services and items explicitly excluded.\n- revision_rounds defines the included revision rounds.\n- estimated_days is an estimated execution duration, not automatically an agreed delivery deadline.\n- pricing_model, base_price and currency describe the freelancer's service pricing.\n- Never assume a service such as music or voiceover is included unless explicitly stated.\n- Never confuse deliverables with additional services.\n- A missing service field must be treated as unspecified, not automatically excluded.\n\n\nالهدف النهائي:\nمساعدة المستقل على فهم ما يريده العميل، ومعرفة ما يدخل ضمن الخدمة وما يتطلب عملاً إضافياً، واكتشاف النواقص قبل الموافقة على المشروع.`\n    }]\n  },\n  contents: [{\n    role: \"user\",\n    parts: [{\n      text:\n        \"رسالة العميل:\\n\" +\n        ($json.body?.client_message ?? \"\") +\n        \"\\n\\nبيانات الخدمة وشروط المستقل:\\n\" +\n        JSON.stringify($json.body?.service ?? {})\n    }]\n  }],\n  generationConfig: {\n    temperature: 0.1,\n    maxOutputTokens: 2400,\n    responseMimeType: \"application/json\"\n  }\n}) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "477bc640-0c31-43ae-87d3-b5a2b35952c0",
+      "name": "HTTP Request",
+      "retryOnFail": false,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REDACTED_CREDENTIAL_ID",
+          "name": "REDACTED_CREDENTIAL_NAME"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Request Analysis1": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "fda24334-019e-4fd7-a8b0-bbbc33f9a3fa",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "7bDPHfCc4Unzd1B4",
+  "tags": []
+}

@@ -1,0 +1,171 @@
+{
+  "name": "SCOPE - Scope Resolution",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scope-resolution",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f762dc6c-2ea3-4e4c-aae0-4db30f159c6b",
+      "name": "Webhook",
+      "webhookId": "REDACTED_WEBHOOK_ID",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REDACTED_CREDENTIAL_ID",
+          "name": "REDACTED_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst body = $('Webhook').first().json.body || {};\n\nconst requiredFields = [\n  'item_id',\n  'answer',\n  'resolved_category',\n  'resolved_title'\n];\n\nconst missing = requiredFields.filter(\n  key => !body[key] ||\n    String(body[key]).trim() === ''\n);\n\nif (missing.length > 0) {\n  throw new Error(\n    'Missing required fields: ' + missing.join(', ')\n  );\n}\n\n// Validate UUID format\nconst uuidPattern =\n  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\n\nif (!uuidPattern.test(body.item_id)) {\n  throw new Error('Invalid item_id.');\n}\n\n// Only allow valid scope categories\nconst allowedCategories = [\n  'deliverable',\n  'included',\n  'excluded',\n  'client_responsibility'\n];\n\nif (!allowedCategories.includes(body.resolved_category)) {\n  throw new Error('Invalid resolution category.');\n}\n\n// Require explicit freelancer confirmation\nif (body.confirmed_by_freelancer !== true) {\n  throw new Error(\n    'Freelancer approval is required before resolving this item.'\n  );\n}\n\n// Require authenticated user's JWT\nconst authorization =\n  $('Webhook').first().json.headers?.authorization;\n\nif (\n  !authorization ||\n  !authorization.startsWith('Bearer ')\n) {\n  throw new Error('Authenticated Supabase user token is required.');\n}\n\nreturn [{\n  json: {\n    success: true,\n    item_id: body.item_id,\n    answer: body.answer.trim(),\n    resolved_category: body.resolved_category,\n    resolved_title: body.resolved_title.trim(),\n    resolved_description:\n      body.resolved_description?.trim() || body.answer.trim()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "7ffb2cb1-50c9-4233-a798-6abd6f46fcd9",
+      "name": "Validate Resolution Input"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yiutescoquvzhmoqopfl.supabase.co/rest/v1/rpc/resolve_scope_item",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "REDACTED_SUPABASE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $('Webhook').first().json.headers.authorization }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_item_id: $json.item_id,\n  p_new_category: $json.resolved_category,\n  p_new_title: $json.resolved_title,\n  p_new_description: $json.resolved_description\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "30ab906f-fe5f-4818-9386-e1ad70c02a04",
+      "name": "Resolve Scope Item - Supabase RPC"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst request = $('Validate Resolution Input').first().json;\nconst result = $input.first().json;\n\nreturn [{\n  json: {\n    success: true,\n    message: \"تم تحديث البند بنجاح.\",\n    item_id: request.item_id,\n    resolved_category: request.resolved_category,\n    resolved_title: request.resolved_title,\n    database_result: result\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "51cf179e-a419-471c-9b01-cc2746bc5dd8",
+      "name": "Format Resolution Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        864,
+        0
+      ],
+      "id": "4d2f7187-ba1b-46a1-9e37-09d20d044389",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Resolution Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Resolution Input": {
+      "main": [
+        [
+          {
+            "node": "Resolve Scope Item - Supabase RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Scope Item - Supabase RPC": {
+      "main": [
+        [
+          {
+            "node": "Format Resolution Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Resolution Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "a0806860-7503-4f3b-9a1f-8354b6960d71",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "wH3pydcHmAvzOzQX",
+  "tags": []
+}

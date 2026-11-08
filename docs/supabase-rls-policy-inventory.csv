@@ -1,0 +1,9 @@
+table_name,rls_enabled,policyname,roles,operation,using_expression,check_expression
+change_reviews,true,change_reviews_own_access,{public},ALL,(user_id = ( SELECT auth.uid() AS uid)),(user_id = ( SELECT auth.uid() AS uid))
+profiles,true,profiles_own_access,{public},ALL,(id = ( SELECT auth.uid() AS uid)),(id = ( SELECT auth.uid() AS uid))
+project_messages,true,messages_own_access,{public},ALL,(user_id = ( SELECT auth.uid() AS uid)),(user_id = ( SELECT auth.uid() AS uid))
+projects,true,projects_own_access,{public},ALL,(user_id = ( SELECT auth.uid() AS uid)),(user_id = ( SELECT auth.uid() AS uid))
+request_analyses,true,analyses_own_access,{public},ALL,(user_id = ( SELECT auth.uid() AS uid)),(user_id = ( SELECT auth.uid() AS uid))
+scope_items,true,scope_items_own_access,{public},ALL,(user_id = ( SELECT auth.uid() AS uid)),(user_id = ( SELECT auth.uid() AS uid))
+scope_versions,true,scope_versions_own_access,{public},ALL,(user_id = ( SELECT auth.uid() AS uid)),(user_id = ( SELECT auth.uid() AS uid))
+services,true,services_own_access,{public},ALL,(user_id = ( SELECT auth.uid() AS uid)),(user_id = ( SELECT auth.uid() AS uid))
